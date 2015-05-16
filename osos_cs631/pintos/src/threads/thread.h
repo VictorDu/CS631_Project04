@@ -108,6 +108,14 @@ struct thread {
   uint32_t magic;               /* Detects stack overflow. */
 };
 
+/*by:team01  element of waitList that represents a thread id that waiting for thread tid*/
+struct waitElem{
+  struct thread *me;
+  //tid_t id;
+  tid_t waker;
+  struct list_elem elem;
+};
+
 void thread_init(void);
 void thread_start();
 
@@ -138,5 +146,5 @@ int thread_get_nice (void);
 void thread_set_nice (int);
 int thread_get_recent_cpu (void);
 int thread_get_load_avg (void);
-
+struct thread *getThreadById(tid_t id);
 #endif /* THREADS_THREAD_H_ */
