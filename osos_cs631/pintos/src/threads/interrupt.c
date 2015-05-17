@@ -237,7 +237,7 @@ void interrupts_dispatch_irq(struct interrupts_stack_frame *stack_frame) {;
   for (i = 0; i < IRQ_COUNT / 2; i++) {
       bool enable = *interrupt_ptr & (1 << i);
       if (enable) {
-          interrupts_dispatch_pending_irq(stack_frame, i);
+          interrupts_dispatch_pending_irq(stack_frame, i + 32);
       }
   }
 

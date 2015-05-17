@@ -99,7 +99,6 @@ void init() {
 
   /* Initializes the frame buffer and console. */
   framebuffer_init();
-  serial_init();
   video_init();
 
   printf("\nOsOs Kernel Initializing");
@@ -111,6 +110,8 @@ void init() {
   /* Initializes the Interrupt System. */
   interrupts_init();
   timer_init();
+  serial_init();
+
 
   thread_start();
   timer_msleep(5000000);

@@ -126,4 +126,17 @@ save_and_switch_context:
 
 	movs pc, lr					// Change to SYSTEM MODE and sets the PC the value in LR_IRQ.
 
+.globl PUT32
+PUT32:
+    str r1,[r0]
+    bx lr
+
+.globl GET32
+GET32:
+    ldr r0,[r0]
+    bx lr
+
+.globl dummy
+dummy:
+    bx lr
 

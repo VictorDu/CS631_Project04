@@ -5,6 +5,9 @@
 #include <string.h>
 
 #include "serial.h"
+#include "bcm2835.h"
+
+#define IRQ_57 57       // IRQ for input
 
 void serial_init(void) {
   test_serial();
@@ -80,8 +83,29 @@ enum
     UART0_TDR    = (UART0_BASE + 0x8C),
 };
 
+static void uart_irq_handler(struct interrupts_stack_frame *stack_frame) {
+  printf("\nKernel - Uart Interrupt Handler.");
+  printf("\n The control is %d\n",mmio_read(UART0_FR));
+  while(!(mmio_read(UART0_FR) & (1 << 4))){
+    printf("\n The data is %d\n",mmio_read(UART0_DR));
+  }
+  printf("\n The control is %d\n",mmio_read(UART0_FR));
+
+  //mmio_write(UART0_CR, 0x00000000);
+
+  //uint32_t abc = *(UART0_CR);
+  // The System Timer compare has to be reseted after the timer interrupt.
+  //timer_reset_timer_compare(IRQ_1);
+  //thread_tick(stack_frame);
+  //timer_msleep(1000000);
+  timer_busy_msleep(300000);
+  // The System Timer compare register has to be set up with the new time after the timer interrupt.
+  //timer_set_interval(IRQ_1, TIMER_PERIODIC_INTERVAL);
+}
+
 void uart_init()
 {
+
   // Disable UART0.
   mmio_write(UART0_CR, 0x00000000);
   // Setup the GPIO pin 14 && 15.
@@ -119,7 +143,10 @@ void uart_init()
 
   // Enable UART0, receive & transfer part of UART.
   mmio_write(UART0_CR, (1 << 0) | (1 << 8) | (1 << 9));
+  interrupts_register_irq(IRQ_57, uart_irq_handler, "UART Interrupt");
 }
+
+
 
 void uart_putc_helper(unsigned char byte) {
   // Wait for UART to become ready to transmit.
