@@ -11,7 +11,7 @@
 #include <debug.h>
 #include <stdint.h>
 #include "interrupt.h"
-
+#include "synch.h"
 #include "../lib/kernel/list.h"
 
 /* States in a thread's life cycle. */
@@ -111,10 +111,17 @@ struct thread {
 /*by:team01  element of waitList that represents a thread id that waiting for thread tid*/
 struct waitElem{
   struct thread *me;
-  //tid_t id;
   tid_t waker;
   struct list_elem elem;
 };
+
+struct timer_wait_node{
+  struct semaphore sema;
+  struct list_elem elem;
+  int startTime;
+  int delay;
+};
+
 
 void thread_init(void);
 void thread_start();
@@ -141,6 +148,8 @@ void thread_foreach (thread_action_func *func, void *aux);
 
 int thread_get_priority (void);
 void thread_set_priority (int);
+
+void add_timer_wait_list(struct timer_wait_node * timernode);
 
 int thread_get_nice (void);
 void thread_set_nice (int);

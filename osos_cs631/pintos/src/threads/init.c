@@ -53,6 +53,36 @@ static void test_swi_interrupt() {
   generate_swi_interrupt(); // Function defined in interrupts.s
 }
 
+static void task1(void *aux){
+  int i;
+  for(i = 0;i<100;i++){
+    printf("%d\n",1);
+  }
+}
+static void task2(void *aux){
+  int i;
+  for(i = 0;i<100;i++){
+    printf("%d\n",2);
+  }
+}
+static void task3(void *aux){
+  int i;
+  for(i = 0;i<100;i++){
+    printf("%d\n",3);
+  }
+}
+static void task4(void *aux){
+  int i;
+  for(i = 0;i<100;i++){
+    printf("%d\n",4);
+  }
+}
+static void task5(void *aux){
+  int i;
+  for(i = 0;i<100;i++){
+    printf("%d\n",5);
+  }
+}
 
 /* Initializes the Operating System. The interruptions have to be disabled at entrance.
 *
@@ -81,10 +111,12 @@ void init() {
   interrupts_init();
   timer_init();
 
+  thread_start();
   timer_msleep(5000000);
+  printf("<init> -------back from first sleeping!");
 
   /* Starts preemptive thread scheduling by enabling interrupts. */
-  thread_start();
+  //thread_start();
 
   printf("\nFinish booting.");
 
@@ -109,7 +141,18 @@ void init() {
   sync_node.done = false;*/
 
   thread_create("CV Test", PRI_MAX, &cv_test, NULL);
-  sema_down(&task_sem);
+  //sema_down(&task_sem);
+  int count = 10;
+  while(count > 0){
+    timer_msleep(5000000);
+    printf("\n main thread \n");
+    count--;
+  }
+  thread_create("Task1", 41, &task1, NULL);
+  thread_create("Task2", 42, &task2, NULL);
+  thread_create("Task3", 43, &task3, NULL);
+  thread_create("Task4", 44, &task4, NULL);
+  thread_create("Task5", 45, &task5, NULL);
 
   //t_wait(&sync_node);
 
@@ -122,7 +165,6 @@ static void hello_test(void *aux) {
   printf("Hello from OsOS\n");
   printf("\n");
   waitTidForTest1=thread_current()->tid;
-  int i;
   printf("<hello_test> I'm sleeping....\n");
   timer_msleep(5000000);
   printf("<hello_test> I'm awake........\n");
@@ -157,5 +199,7 @@ static void cv_test(void *aux) {
   printf("\n<cv_test> CV_test done!! should be second----------------------\n");
   //t_exit(&sync_node);
 }
+
+
 
 
