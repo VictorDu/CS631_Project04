@@ -7,7 +7,7 @@
 
 #ifndef DEVICES_TIMER_H_
 #define DEVICES_TIMER_H_
-
+#include "../threads/thread.h"
 void timer_init(void);
 
 int timer_get_timestamp();

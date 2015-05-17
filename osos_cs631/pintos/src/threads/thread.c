@@ -4,7 +4,6 @@
  *  Created on: Nov 22, 2014
  *      Author: jcyescas
  */
-
 #include <debug.h>
 #include <list.h>
 #include <random.h>
@@ -15,7 +14,6 @@
 #include <string.h>
 
 #include "../devices/gpio.h"
-#include "../devices/timer.h"
 #include "flags.h"
 #include "interrupt.h"
 #include "palloc.h"
@@ -45,6 +43,10 @@ static struct list ready_list;
 /* List of all processes.  Processes are added to this list
    when they are first scheduled and removed when they exit. */
 static struct list all_list;
+
+/*by:team01  list of thread that waiting for other thread*/
+static struct list waitList;
+static struct list timeWaitList;
 
 /* Idle thread. */
 static struct thread *idle_thread;
@@ -111,6 +113,9 @@ void thread_init(void) {
   lock_init (&tid_lock);
   list_init(&ready_list);
   list_init(&all_list);
+  //by team01  init waitList
+  list_init(&waitList);
+  list_init(&timeWaitList);
 
   /* Set up a thread structure for the running thread. */
   initial_thread = get_first_thread();
@@ -185,14 +190,13 @@ void thread_tick (struct interrupts_stack_frame *stack_frame) {
   set_current_interrupts_stack_frame(stack_frame);
 
   struct thread *t = thread_current();
-
   /* Update statistics. */
   if (t == idle_thread) {
       idle_ticks++;
   } else {
       kernel_ticks++;
   }
-
+  visitTimeWaitList();
   /* Enforce preemption. */
   ++thread_ticks;
   if (thread_ticks >= TIME_SLICE) {
@@ -301,9 +305,13 @@ void thread_unblock (struct thread *t) {
 
   old_level = interrupts_disable ();
   ASSERT (t->status == THREAD_BLOCKED);
+  printf("\n<thread_unblock> 111111111111111\n");
   list_push_back (&ready_list, &t->elem);
   t->status = THREAD_READY;
+  printf("\n<thread_unblock> 2\n");
   interrupts_set_level (old_level);
+  printf("\n<thread_unblock> 3\n");
+
 }
 
 /* Returns the name of the running thread. */
@@ -344,6 +352,9 @@ void thread_exit (void) {
      when it calls thread_schedule_tail(). */
   interrupts_disable();
   printf("\nDying slowly ---------------------------------- %s", thread_current()->name);
+  printf("\n<thread_exit> begin waking up waiting Threads........");
+  wakeWaitedThread(thread_current()->tid);
+  printf("\n<thread_exit> finish waking up waiting Threads........\n");
   list_remove (&thread_current()->allelem);
   thread_current ()->status = THREAD_DYING;
   schedule ();
@@ -450,7 +461,7 @@ void thread_schedule_tail(struct thread *prev, struct thread *next) {
 
        /* Releasing the memory that was assigned to this thread. */
        palloc_free_page(prev);
-       timer_msleep(1000000);
+       timer_busy_msleep(1000000);
    }
 }
 
@@ -520,8 +531,9 @@ static void idle (void *idle_started_ UNUSED) {
 
   for(;;) {
       SetForeColour(green);
+      interrupts_enable();
       printf("\nIdle thread....");
-      timer_msleep(1000000);
+      timer_busy_msleep(1000000);
 
       /* Let someone else run. */
       interrupts_disable();
@@ -568,9 +580,28 @@ static bool is_thread (struct thread *t) {
  */
 static struct thread* thread_get_next_thread_to_run(void) {
   if (list_empty(&ready_list)) {
+    printf("++++++++++++++++++++++++++++");
       return idle_thread;
   } else {
-      return list_entry (list_pop_front (&ready_list), struct thread, elem);
+    int priority = -1;
+    struct list_elem *e, *result;
+    for (e = list_begin (&ready_list); e != list_end (&ready_list);
+         e = list_next (e)) {
+         struct thread *t = list_entry (e, struct thread, elem);
+        //printf("\n<thread_get_next_thread_to_run> thread %d -->priority=%d\n",t->tid,t->priority);
+         if(t->priority > priority){
+           printf("\n<thread_get_next_thread_to_run> thread %d -->priority=%d\n",t->tid,t->priority);
+           result = e;
+           priority = t->priority;
+         }
+     }
+    struct thread *t = list_entry (result, struct thread, elem);
+    printf("\n next id is %d \n",t->tid);
+    list_remove(result);
+    return t;
+
+
+      //return list_entry (list_pop_front (&ready_list), struct thread, elem);
   }
 }
 
@@ -633,4 +664,93 @@ static void set_current_interrupts_stack_frame(struct interrupts_stack_frame *st
 static struct interrupts_stack_frame *get_current_interrupts_stack_frame() {
   ASSERT(current_stack_frame != NULL)
   return current_stack_frame;
+}
+
+
+//Modified by Team01
+struct thread *getThreadById(tid_t id){
+  struct list_elem *e;
+  for (e = list_begin (&all_list); e != list_end (&all_list);
+       e = list_next (e)) {
+       struct thread *t = list_entry (e, struct thread, allelem);
+       printf("<getThreadById> checking %d\n",t->tid);
+       if(t->tid==id){
+         printf("I have found the %d thread\n",id);
+             return t;
+       }
+   }
+  printf("I cannot found the %d thread\n",id);
+  return NULL;
+}
+
+void wakeWaitedThread(tid_t id){
+  printf("\n<wakeWaitedThread> enter this wake thread %d",list_empty(&waitList));
+
+  struct list_elem *e;
+   for (e = list_begin (&waitList); e != list_end (&waitList);
+        e = list_next (e)) {
+        struct waitElem *t = list_entry (e, struct waitElem, elem);
+        printf("\n<wakeWaitedThread> this thread is %d",t->waker);
+        if(t->waker==id){
+          printf("\n <wakeWaitedThread> unblock Thread %d ; Addr: %p----------------\n ", t->me->tid,t->me);
+              thread_unblock(t->me);
+              /*struct list_elem *pre=e->prev;
+              e->prev=e->next;
+              e->next->prev=pre;
+              printf("<wakeWaitedThread> 4");
+              //free(e);*/
+              list_remove(e);
+        }
+    }
+}
+/*by team01 make curThread wait untill thread id is done*/
+void wait(tid_t id){
+  struct thread *curThrd=thread_current();
+  struct thread *thrd=getThreadById(id);
+  if(thrd!=NULL){
+    printf("\n block Thread %d--------wait %d--------\n ", curThrd->tid,id);
+    interrupts_disable();
+    struct waitElem elem;// = &e;
+    elem.waker=id;
+    elem.me=curThrd;
+    printf("\n----------------------------------------------\n");
+    printf("\n<wait> init: elem.me->tid = %d ; Addr:%p \n",elem.me->tid,elem.me);
+    printf("\n<wait> init: elem.waker = %d\n",elem.waker);
+    printf("\n----------------------------------------------\n");
+
+    list_push_back(&waitList,&elem.elem);
+
+
+    struct list_elem *e;
+     for (e = list_begin (&waitList); e != list_end (&waitList);
+          e = list_next (e)) {
+          struct waitElem *t = list_entry (e, struct waitElem, elem);
+          printf("\n <wait> t->waker = %d ; t->me = %p----------------\n ", t->waker,t->me);
+      }
+
+
+    printf("enter this wake thread %d",list_empty(&waitList));
+    thread_block();
+    //interrupts_enable();
+  }else
+    printf("<wait()> NULL.....\n");
+}
+
+void visitTimeWaitList(){
+  printf("<visitTimeWaitList> is empty %d",list_empty(&timeWaitList));
+  struct list_elem *e;
+   for (e = list_begin (&timeWaitList); e != list_end (&timeWaitList);
+        e = list_next (e)) {
+        struct timer_wait_node *t = list_entry (e, struct timer_wait_node, elem);
+        printf("<visitTimeWaitList> %d, %d",t->startTime , t->delay);
+
+        if(timer_get_timestamp() - t->startTime > t->delay){
+          sema_up(&t->sema);
+          list_remove(e);
+        }
+    }
+}
+
+void add_timer_wait_list(struct timer_wait_node * timernode){
+  list_push_back(&timeWaitList,&(timernode->elem));
 }
