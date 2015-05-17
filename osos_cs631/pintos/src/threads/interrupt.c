@@ -17,6 +17,7 @@
 #include "flags.h"
 #include "interrupt.h"
 #include "thread.h"
+#include "dbg_msg.h"
 
 /* Number of BCM2853 interrupts. */
 #define IRQ_COUNT 64
@@ -205,7 +206,7 @@ void interrupts_dispatch_irq(struct interrupts_stack_frame *stack_frame) {;
   unsigned short blue = 0x1f;
   int32_t foreColour = GetForeColour();
   SetForeColour(blue);
-  printf("\nKERNEL TAKING OVER - Dispatching IRQ");
+  if(!(output&miscoff)) printf("\nKERNEL TAKING OVER - Dispatching IRQ");
 
   /* External interrupts are special.
      We only handle one at a time (so interrupts must be off).
@@ -222,6 +223,7 @@ void interrupts_dispatch_irq(struct interrupts_stack_frame *stack_frame) {;
   int32_t i;
   // First half of the pending interrupts (0-31)
   int32_t *interrupt_ptr = (int32_t *) INTERRUPT_REGISTER_PENDING_IRQ_0_31;
+  printf("\n interrupt number first32--------------------%d-----------------------\n",*interrupt_ptr);
   for (i = 0; i < IRQ_COUNT / 2; i++) {
       bool enable = *interrupt_ptr & (1 << i);
       if (enable) {
@@ -231,10 +233,11 @@ void interrupts_dispatch_irq(struct interrupts_stack_frame *stack_frame) {;
 
   // Second half of the pending interrupts (32-63)
   interrupt_ptr = (int32_t *) INTERRUPT_REGISTER_PENDING_IRQ_32_63;
+  printf("\n interrupt number second32--------------------%d-----------------------\n",*interrupt_ptr);
   for (i = 0; i < IRQ_COUNT / 2; i++) {
       bool enable = *interrupt_ptr & (1 << i);
       if (enable) {
-          interrupts_dispatch_pending_irq(stack_frame, i);
+          interrupts_dispatch_pending_irq(stack_frame, i + 32);
       }
   }
 

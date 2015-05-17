@@ -20,6 +20,8 @@
 #include "synch.h"
 #include "thread.h"
 #include "vaddr.h"
+#include "dbg_msg.h"
+
 
 /* Returns the value of the current stack pointer. The function is defined
    in interruptsHandlers.s. */
@@ -196,6 +198,7 @@ void thread_tick (struct interrupts_stack_frame *stack_frame) {
   } else {
       kernel_ticks++;
   }
+  //by team01
   visitTimeWaitList();
   /* Enforce preemption. */
   ++thread_ticks;
@@ -305,12 +308,12 @@ void thread_unblock (struct thread *t) {
 
   old_level = interrupts_disable ();
   ASSERT (t->status == THREAD_BLOCKED);
-  printf("\n<thread_unblock> 111111111111111\n");
+  //printf("\n<thread_unblock> 1\n");
   list_push_back (&ready_list, &t->elem);
   t->status = THREAD_READY;
-  printf("\n<thread_unblock> 2\n");
+  //printf("\n<thread_unblock> 2\n");
   interrupts_set_level (old_level);
-  printf("\n<thread_unblock> 3\n");
+  //printf("\n<thread_unblock> 3\n");
 
 }
 
@@ -351,10 +354,10 @@ void thread_exit (void) {
      and schedule another process.  That process will destroy us
      when it calls thread_schedule_tail(). */
   interrupts_disable();
-  printf("\nDying slowly ---------------------------------- %s", thread_current()->name);
-  printf("\n<thread_exit> begin waking up waiting Threads........");
+  if(!(output&miscoff)) printf("\nDying slowly ---------------------------------- %s", thread_current()->name);
+  if(output&tsk1) printf("\n<thread_exit> begin waking up waiting Threads........");
   wakeWaitedThread(thread_current()->tid);
-  printf("\n<thread_exit> finish waking up waiting Threads........\n");
+  if(output&tsk1) printf("\n<thread_exit> finish waking up waiting Threads........\n");
   list_remove (&thread_current()->allelem);
   thread_current ()->status = THREAD_DYING;
   schedule ();
@@ -388,13 +391,13 @@ static void schedule() {
   ASSERT (cur->status != THREAD_RUNNING);
   ASSERT (is_thread (next));
 
-  printf("\nKernel Scheduler");
+  if(!(output&miscoff)) printf("\nKernel Scheduler");
 
   if (interrupts_was_irq_generated()) {
-    printf("\nScheduling a thread in interrupt.");
+    if(!(output&miscoff)) printf("\nScheduling a thread in interrupt.");
     schedule_in_interrupt(cur, next);
   } else {
-    printf("\nScheduling a thread not in interrupt.");
+    if(!(output&miscoff)) printf("\nScheduling a thread not in interrupt.");
     schedule_not_in_interrupt(cur, next);
   }
 }
@@ -440,9 +443,9 @@ static void schedule_not_in_interrupt(struct thread *cur, struct thread *next) {
 void thread_schedule_tail(struct thread *prev, struct thread *next) {
   ASSERT (interrupts_get_level () == INTERRUPTS_OFF);
 
-  printf("\nSchedule tail");
-  printf("\nPrev: %s, TID: %d", prev->name, prev->tid);
-  printf("\nNext: %s, TID: %d", next->name, next->tid);
+  if(!(output&miscoff)) printf("\nSchedule tail");
+  if(!(output&miscoff)) printf("\nPrev: %s, TID: %d", prev->name, prev->tid);
+  if(!(output&miscoff)) printf("\nNext: %s, TID: %d", next->name, next->tid);
 
   /* Start new time slice. */
   thread_ticks = 0;
@@ -457,7 +460,7 @@ void thread_schedule_tail(struct thread *prev, struct thread *next) {
      palloc().) */
   if (prev->status == THREAD_DYING && prev != initial_thread) {
        ASSERT (prev != next)
-       printf("\nReleasing resources of : %s, TID: %d", prev->name, prev->tid);
+    if(!(output&miscoff)) printf("\nReleasing resources of : %s, TID: %d", prev->name, prev->tid);
 
        /* Releasing the memory that was assigned to this thread. */
        palloc_free_page(prev);
@@ -532,7 +535,7 @@ static void idle (void *idle_started_ UNUSED) {
   for(;;) {
       SetForeColour(green);
       interrupts_enable();
-      printf("\nIdle thread....");
+      if(!((output)&miscoff)) printf("\nIdle thread....");
       timer_busy_msleep(1000000);
 
       /* Let someone else run. */
@@ -579,8 +582,8 @@ static bool is_thread (struct thread *t) {
  * the run queue.) If the run queue is empty, return idle_thred.
  */
 static struct thread* thread_get_next_thread_to_run(void) {
+  //by team01:change to priority based
   if (list_empty(&ready_list)) {
-    printf("++++++++++++++++++++++++++++");
       return idle_thread;
   } else {
     int priority = -1;
@@ -588,20 +591,17 @@ static struct thread* thread_get_next_thread_to_run(void) {
     for (e = list_begin (&ready_list); e != list_end (&ready_list);
          e = list_next (e)) {
          struct thread *t = list_entry (e, struct thread, elem);
-        //printf("\n<thread_get_next_thread_to_run> thread %d -->priority=%d\n",t->tid,t->priority);
          if(t->priority > priority){
-           printf("\n<thread_get_next_thread_to_run> thread %d -->priority=%d\n",t->tid,t->priority);
+           if((output)&tsk4) printf("\n<thread_get_next_thread_to_run> thread %d -->priority=%d\n",t->tid,t->priority);
            result = e;
            priority = t->priority;
          }
      }
     struct thread *t = list_entry (result, struct thread, elem);
-    printf("\n next id is %d \n",t->tid);
+    if((output)&tsk4) printf("\n <thread_get_next_thread_to_run> next thread to run is %d \n",t->tid);
     list_remove(result);
     return t;
 
-
-      //return list_entry (list_pop_front (&ready_list), struct thread, elem);
   }
 }
 
@@ -673,76 +673,56 @@ struct thread *getThreadById(tid_t id){
   for (e = list_begin (&all_list); e != list_end (&all_list);
        e = list_next (e)) {
        struct thread *t = list_entry (e, struct thread, allelem);
-       printf("<getThreadById> checking %d\n",t->tid);
+       if(output&tsk1) printf("dbg: <getThreadById> checking %d\n",t->tid);
        if(t->tid==id){
-         printf("I have found the %d thread\n",id);
+         if(output&tsk1) printf("dbg: <getThreadById> I have found the %d thread\n",id);
              return t;
        }
    }
-  printf("I cannot found the %d thread\n",id);
+  if(output&tsk1) printf("dbg: <getThreadById> I cannot found the %d thread\n",id);
   return NULL;
 }
 
 void wakeWaitedThread(tid_t id){
-  printf("\n<wakeWaitedThread> enter this wake thread %d",list_empty(&waitList));
-
   struct list_elem *e;
    for (e = list_begin (&waitList); e != list_end (&waitList);
         e = list_next (e)) {
         struct waitElem *t = list_entry (e, struct waitElem, elem);
-        printf("\n<wakeWaitedThread> this thread is %d",t->waker);
+        if(output&tsk1) printf("\ndbg: <wakeWaitedThread> this thread is %d",t->waker);
         if(t->waker==id){
-          printf("\n <wakeWaitedThread> unblock Thread %d ; Addr: %p----------------\n ", t->me->tid,t->me);
-              thread_unblock(t->me);
-              /*struct list_elem *pre=e->prev;
-              e->prev=e->next;
-              e->next->prev=pre;
-              printf("<wakeWaitedThread> 4");
-              //free(e);*/
-              list_remove(e);
+          if(output&tsk1) printf("\ndbg:  <wakeWaitedThread> unblock Thread %d ; Addr: %p----------------\n ", t->me->tid,t->me);
+          thread_unblock(t->me);
+          list_remove(e);
         }
     }
 }
-/*by team01 make curThread wait untill thread id is done*/
+/*by team01 make curThread wait until thread id is done*/
 void wait(tid_t id){
   struct thread *curThrd=thread_current();
   struct thread *thrd=getThreadById(id);
   if(thrd!=NULL){
-    printf("\n block Thread %d--------wait %d--------\n ", curThrd->tid,id);
+    if(output&tsk1) printf("\ndbg: <wait> block Thread %d--------waiting for %d--------\n ", curThrd->tid,id);
     interrupts_disable();
-    struct waitElem elem;// = &e;
+    struct waitElem elem;
     elem.waker=id;
     elem.me=curThrd;
-    printf("\n----------------------------------------------\n");
-    printf("\n<wait> init: elem.me->tid = %d ; Addr:%p \n",elem.me->tid,elem.me);
-    printf("\n<wait> init: elem.waker = %d\n",elem.waker);
-    printf("\n----------------------------------------------\n");
+    if(output&tsk1) printf("\ndbg: ----------------------------------------------\n");
+    if(output&tsk1) printf("\ndbg: <wait> init: elem.me->tid = %d ; Addr:%p \n",elem.me->tid,elem.me);
+    if(output&tsk1) printf("\ndbg: <wait> init: elem.waker = %d\n",elem.waker);
+    if(output&tsk1) printf("\ndbg: ----------------------------------------------\n");
 
     list_push_back(&waitList,&elem.elem);
-
-
-    struct list_elem *e;
-     for (e = list_begin (&waitList); e != list_end (&waitList);
-          e = list_next (e)) {
-          struct waitElem *t = list_entry (e, struct waitElem, elem);
-          printf("\n <wait> t->waker = %d ; t->me = %p----------------\n ", t->waker,t->me);
-      }
-
-
-    printf("enter this wake thread %d",list_empty(&waitList));
     thread_block();
-    //interrupts_enable();
   }else
-    printf("<wait()> NULL.....\n");
+    if(output&tsk1) printf("dbg: <wait> No such a thread: %d\n", id);
 }
 
 void visitTimeWaitList(){
-  printf("<visitTimeWaitList> is empty %d",list_empty(&timeWaitList));
   struct list_elem *e;
    for (e = list_begin (&timeWaitList); e != list_end (&timeWaitList);
         e = list_next (e)) {
         struct timer_wait_node *t = list_entry (e, struct timer_wait_node, elem);
-        printf("<visitTimeWaitList> %d, %d",t->startTime , t->delay);
+        if(output&tsk2) printf("dbg: <visitTimeWaitList> startTime: %d, delay: %d\n",t->startTime , t->delay);
 
         if(timer_get_timestamp() - t->startTime > t->delay){
           sema_up(&t->sema);

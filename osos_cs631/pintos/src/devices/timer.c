@@ -9,6 +9,8 @@
 #include "timer.h"
 #include "bcm2835.h"
 #include "../threads/interrupt.h"
+#include "../threads/dbg_msg.h"
+
 
 #define TIMER_PERIODIC_INTERVAL 500000 // Time in miliseconds
 
@@ -53,6 +55,7 @@ int timer_get_timestamp() {
 }
 
 void timer_busy_msleep(int milliseconds){
+  // Implements busy waiting
   int startTime = timer_get_timestamp();
   int elapseTime = timer_get_timestamp() - startTime;
   while (milliseconds > elapseTime) {
@@ -60,26 +63,20 @@ void timer_busy_msleep(int milliseconds){
   }
 }
 
-// TODO support 64 bits values
+// by team01
 void timer_msleep(int milliseconds) {
-  // Implements busy waiting
-  /*int startTime = timer_get_timestamp();
-  int elapseTime = timer_get_timestamp() - startTime;
-  while (milliseconds > elapseTime) {
-      elapseTime = timer_get_timestamp() - startTime;
-  }*/
+  // Implements nobusy waiting
   interrupts_disable();
   struct timer_wait_node timernode;
   timernode.startTime = timer_get_timestamp();
   timernode.delay = milliseconds;
   sema_init(&timernode.sema, 0);
-  //printf("<timer_sleep> timeWaitList is empty %d",list_empty(&timeWaitList));
   add_timer_wait_list(&timernode);
   interrupts_enable();
   tid_t tid = thread_current()->tid;
-  printf("<timer_sleep> - This thread is sleep %d\n",tid);
+  if((output)&(tsk2)) printf("dbg: <timer_msleep> - This thread is sleep %d\n",tid);
   sema_down(&timernode.sema);
-  printf("<timer_sleep> - This thread is wake %d\n",tid);
+  if((output)&(tsk2)) printf("dbg: <timer_msleep> - This thread is wake %d\n",tid);
 }
 
 /* Resets the System Timer Compare register (C0-C3) )in the Timer Control/Status register.
@@ -102,13 +99,13 @@ static void timer_reset_timer_compare(int timer_compare) {
  * IRQ line using the BCM2835 interrupt controller.
  */
 static void timer_irq_handler(struct interrupts_stack_frame *stack_frame) {
-  printf("\nKernel - Timer Interrupt Handler.");
+  if(!(output&miscoff)) printf("\nKernel - Timer Interrupt Handler.");
 
   // The System Timer compare has to be reseted after the timer interrupt.
   timer_reset_timer_compare(IRQ_1);
   thread_tick(stack_frame);
   //timer_msleep(1000000);
-  timer_busy_msleep(300000);
+  //timer_busy_msleep(300000);
   // The System Timer compare register has to be set up with the new time after the timer interrupt.
   timer_set_interval(IRQ_1, TIMER_PERIODIC_INTERVAL);
 }

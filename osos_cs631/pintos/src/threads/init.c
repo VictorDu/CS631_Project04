@@ -18,6 +18,7 @@
 #include "synch.h"
 #include "thread.h"
 #include "vaddr.h"
+#include "dbg_msg.h"
 
 /* -ul: Maximum number of pages to put into palloc's user pool. */
 static size_t user_page_limit = SIZE_MAX;
@@ -98,7 +99,6 @@ void init() {
 
   /* Initializes the frame buffer and console. */
   framebuffer_init();
-  serial_init();
   video_init();
 
   printf("\nOsOs Kernel Initializing");
@@ -110,10 +110,12 @@ void init() {
   /* Initializes the Interrupt System. */
   interrupts_init();
   timer_init();
+  serial_init();
+
 
   thread_start();
   timer_msleep(5000000);
-  printf("<init> -------back from first sleeping!");
+  if(output&tsk2) printf("\ndbg: <init> -------back from first sleeping!\n");
 
   /* Starts preemptive thread scheduling by enabling interrupts. */
   //thread_start();
@@ -125,16 +127,6 @@ void init() {
   sema_init(&task_sem, 0);
 
   thread_create("Hello Test", PRI_MAX, &hello_test, NULL);
-  //---------------------------------------
-  int i;
-  for(i=1;i<=5;i++){
-    struct thread * thrd=getThreadById(i);
-    if(thrd==NULL)
-      printf(">>>>>>>>>>>>>>>>>>>find NULL<<<<<<<<<<<<<<<<<<<<<<<<<\n");
-    else
-      printf(">>>>>>>>>>>>>>>>>>>find %d<<<<<<<<<<<<<<<<<<<<<<<<<<<\n",thrd->tid);
-  }
-  //----------------------------------
 
 /*  lock_init(&sync_node.mutex);
   cond_init(&sync_node.cv);
@@ -161,14 +153,14 @@ void init() {
 }
 
 static void hello_test(void *aux) {
-  printf("\n");
-  printf("Hello from OsOS\n");
+  printf("\n-------------------------------\n");
+  printf("<hello_test>Hello from OsOS\n");
   printf("\n");
   waitTidForTest1=thread_current()->tid;
-  printf("<hello_test> I'm sleeping....\n");
+  if(output&tsk2)  printf("dbg: <hello_test> I'm sleeping....\n");
   timer_msleep(5000000);
-  printf("<hello_test> I'm awake........\n");
-  printf("\nhello_test Done! should be first----------------------\n");
+  if(output&tsk2)  printf("dbg: <hello_test> I'm awake........\n");
+  printf("\n<hello_test> hello_test Done! should be the first----------------------\n");
 
   //sema_up(&task_sem);
 }
@@ -191,12 +183,12 @@ static void t_exit(struct wait_node *wn)
 }
 
 static void cv_test(void *aux) {
-  printf("\n");
+  printf("\n-----------------------------------\n");
   printf("\n<cv_test> Hello from CV Test\n");
-  printf("\n<cv_test> I'm waiting for a thread........");
+  if(output&tsk1)printf("\ndbg: <cv_test> I'm waiting for a thread........");
   wait(waitTidForTest1);
-  printf("\n<cv_test> finish waiting!");
-  printf("\n<cv_test> CV_test done!! should be second----------------------\n");
+  if(output&tsk1)printf("\ndbg: <cv_test> finish waiting!");
+  printf("\n<cv_test> CV_test done!! should be the second----------------------\n");
   //t_exit(&sync_node);
 }
 
