@@ -7,6 +7,12 @@ Task 1: void wait(tid_t):
 
 
 Task 2: no busy wait timer_msleep():
+In this task, we also maintained a new list called timeWaitList, which contains timer_wait_node, a struct that record start time, delay time and a semaphore of a thread. Each time a thread called msleep, a new node will be created and added to the timeWaitList. The semaphore, which connect the node and current thread, will be initialized as value=0. The, the thread will try to sema_down(), which will cause it block. In every thread tick, we walk through the timeWaitList, and check if there is any node that need to be waked up(startTime+delay<=currentTime). We wake these nodes up by sema_up(node->sema), which makes sema_down() in thread continue to run. In this way, we implements a none busy wait timer_msleep.
+
+Task 3: UART:
+
+Task 4: priority:
+In this task, we simply modified thread_get_next_thread_to_run. Instead of poping the first element from ready list, We walk through the whole list to find the element with highest priority, and return this element as the next thread to run.s
 
 
 
