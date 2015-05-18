@@ -14,6 +14,6 @@
 #define tsk5 16//shell
 #define miscoff 32
 #define allTsks tsk1+tsk2+tsk3+tsk4
-#define output (tsk5+miscoff)
+#define output (32)
 
 #endif /* SRC_THREADS_DBG_MSG_H_ */

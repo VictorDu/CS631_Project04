@@ -742,5 +742,6 @@ void setShellThread(struct thread* s){
 }
 
 void unblockShellThread(){
+  if(shellThread->status == THREAD_BLOCKED)
   thread_unblock(shellThread);
 }

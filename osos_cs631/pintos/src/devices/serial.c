@@ -93,7 +93,7 @@ static void uart_irq_handler(struct interrupts_stack_frame *stack_frame) {
   int flag = 0;
   while(!(mmio_read(UART0_FR) & (1 << 4))){
     buffer[bufferPointer++] = mmio_read(UART0_DR);
-    printf("\n The data is %d\n",buffer[bufferPointer-1]);
+    printf("%c",buffer[bufferPointer-1]);
     if(buffer[bufferPointer-1] == 13)
       flag = 1;
   }
