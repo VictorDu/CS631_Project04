@@ -19,12 +19,12 @@
 #include "thread.h"
 #include "vaddr.h"
 #include "dbg_msg.h"
+#include "../devices/serial.h"
 
 /* -ul: Maximum number of pages to put into palloc's user pool. */
 static size_t user_page_limit = SIZE_MAX;
 
 /* Tasks for the Threads. */
-static struct semaphore task_sem;
 
 static void hello_test(void *);
 
@@ -33,14 +33,18 @@ struct wait_node {
   struct condition cv;
   bool done;
 };
-
 static struct wait_node sync_node;
+
+
 
 static void t_wait(struct wait_node *wn);
 static void t_exit(struct wait_node *wn);
 static void cv_test(void *);
 
 static tid_t waitTidForTest1;
+
+static struct semaphore task_sem;
+
 /*
  * kernel.c
  *
@@ -85,6 +89,41 @@ static void task5(void *aux){
   }
 }
 
+void exec(char *cmd){
+  printf("exec(%s)", cmd);
+}
+
+static void shell(void *aux){
+  char* command = "";
+  int finish = 0;
+  while(true){
+    printf("\nProject04-Shell ~$");
+    interrupts_disable();
+    thread_block();
+
+    if(output&tsk5) printf("\n<shell> Recieved charactor\n");
+    int i;
+    for(i=0;i<strlen(buffer);i++){
+      if(buffer[i]=='\n'){
+        finish=1;
+        buffer[i] = '\0';
+        break;
+      }
+    }
+    if(output&tsk5) printf("\n<shell> ready to strcat\n ");
+    strlcat(command, buffer, strlen(command) + strlen(buffer) );
+    if(output&tsk5) printf("\n<shell> finish to strcat\n ");
+    if(finish){
+      exec(command);
+      command = "";
+    }
+    setBufferPointer(0);
+    interrupts_enable();
+  }
+}
+
+
+
 /* Initializes the Operating System. The interruptions have to be disabled at entrance.
 *
 *  - Sets interruptions
@@ -126,31 +165,42 @@ void init() {
 
   sema_init(&task_sem, 0);
 
-  thread_create("Hello Test", PRI_MAX, &hello_test, NULL);
+  //thread_create("Hello Test", PRI_MAX, &hello_test, NULL);
+  //sema_init(&shellSema, 0);
+  tid_t shellThreadId = thread_create("Shell", PRI_MAX, &shell,NULL);
+  struct thread * shellThread = getThreadById(shellThreadId);
+ if(shellThread!=NULL)
+  printf("\nshellThread is %d\n",shellThread->tid);
+ else
+   printf("\n shellThread is NULL\n");
+setShellThread(shellThread);
 
-/*  lock_init(&sync_node.mutex);
-  cond_init(&sync_node.cv);
-  sync_node.done = false;*/
 
-  thread_create("CV Test", PRI_MAX, &cv_test, NULL);
-  //sema_down(&task_sem);
-  int count = 10;
+
+  //thread_create("CV Test", PRI_MAX, &cv_test, NULL);
+  sema_down(&task_sem);
+ /* int count = 10;
   while(count > 0){
     timer_msleep(5000000);
     printf("\n main thread \n");
     count--;
-  }
-  thread_create("Task1", 41, &task1, NULL);
+  }*/
+  /*thread_create("Task1", 41, &task1, NULL);
   thread_create("Task2", 42, &task2, NULL);
   thread_create("Task3", 43, &task3, NULL);
   thread_create("Task4", 44, &task4, NULL);
-  thread_create("Task5", 45, &task5, NULL);
+  thread_create("Task5", 45, &task5, NULL);*/
 
   //t_wait(&sync_node);
 
   printf("\nAll done.");
   thread_exit ();
 }
+
+
+
+
+
 
 static void hello_test(void *aux) {
   printf("\n-------------------------------\n");
@@ -172,6 +222,7 @@ static void t_wait(struct wait_node *wn)
     cond_wait(&wn->cv, &wn->mutex);
   }
   lock_release(&wn->mutex);
+  wn->done = false;
 }
 
 static void t_exit(struct wait_node *wn)

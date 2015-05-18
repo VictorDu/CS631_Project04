@@ -49,6 +49,8 @@ static struct list all_list;
 /*by:team01  list of thread that waiting for other thread*/
 static struct list waitList;
 static struct list timeWaitList;
+static struct thread* shellThread;
+
 
 /* Idle thread. */
 static struct thread *idle_thread;
@@ -733,4 +735,12 @@ void visitTimeWaitList(){
 
 void add_timer_wait_list(struct timer_wait_node * timernode){
   list_push_back(&timeWaitList,&(timernode->elem));
+}
+
+void setShellThread(struct thread* s){
+  shellThread = s;
+}
+
+void unblockShellThread(){
+  thread_unblock(shellThread);
 }
