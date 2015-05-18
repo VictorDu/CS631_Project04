@@ -49,6 +49,11 @@ static struct list all_list;
 /*by:team01  list of thread that waiting for other thread*/
 static struct list waitList;
 static struct list timeWaitList;
+static struct thread* shellThread;
+static char* thead_status_name[] = {"RUNNING", "READY" , "BLOCK", "DYING"};
+static int enablePriority = 0;
+
+
 
 /* Idle thread. */
 static struct thread *idle_thread;
@@ -139,6 +144,7 @@ static void init_thread (struct thread *t, const char *name, int priority) {
   strlcpy (t->name, name, sizeof t->name);
   /* Sets the stack. It's a full descending stack.*/
   t->stack_frame.r13_sp = get_current_sp();
+  t->timetick = 0;
   t->priority = priority;
   t->magic = THREAD_MAGIC;
   list_push_back (&all_list, &t->allelem);
@@ -196,6 +202,7 @@ void thread_tick (struct interrupts_stack_frame *stack_frame) {
   if (t == idle_thread) {
       idle_ticks++;
   } else {
+    t->timetick++;
       kernel_ticks++;
   }
   //by team01
@@ -246,6 +253,7 @@ tid_t thread_create(const char *name, int32_t priority,
 
   // Setting the tid number.
   tid = thread->tid = allocate_tid();
+  thread->startTime = timer_get_timestamp();
 
   thread->status = THREAD_BLOCKED;
   strlcpy(thread->name, name, sizeof thread->name);
@@ -586,9 +594,10 @@ static struct thread* thread_get_next_thread_to_run(void) {
   if (list_empty(&ready_list)) {
       return idle_thread;
   } else {
-    int priority = -1;
-    struct list_elem *e, *result;
-    for (e = list_begin (&ready_list); e != list_end (&ready_list);
+    if(enablePriority){
+      int priority = -1;
+      struct list_elem *e, *result;
+      for (e = list_begin (&ready_list); e != list_end (&ready_list);
          e = list_next (e)) {
          struct thread *t = list_entry (e, struct thread, elem);
          if(t->priority > priority){
@@ -596,12 +605,13 @@ static struct thread* thread_get_next_thread_to_run(void) {
            result = e;
            priority = t->priority;
          }
-     }
-    struct thread *t = list_entry (result, struct thread, elem);
-    if((output)&tsk4) printf("\n <thread_get_next_thread_to_run> next thread to run is %d \n",t->tid);
-    list_remove(result);
-    return t;
-
+      }
+      struct thread *t = list_entry (result, struct thread, elem);
+      if((output)&tsk4) printf("\n <thread_get_next_thread_to_run> next thread to run is %d \n",t->tid);
+        list_remove(result);
+      return t;
+    }else
+      return list_entry (list_pop_front (&ready_list), struct thread, elem);
   }
 }
 
@@ -734,3 +744,38 @@ void visitTimeWaitList(){
 void add_timer_wait_list(struct timer_wait_node * timernode){
   list_push_back(&timeWaitList,&(timernode->elem));
 }
+
+void setShellThread(struct thread* s){
+  shellThread = s;
+}
+
+void unblockShellThread(){
+  if(shellThread->status == THREAD_BLOCKED)
+  thread_unblock(shellThread);
+}
+
+void printAllThreadInfor(int ifRunning){
+  struct list_elem *e;
+  printf("\n TID | Name | Priority | Status | Running Time \n");
+    for (e = list_begin (&all_list); e != list_end (&all_list);
+         e = list_next (e)) {
+         struct thread *t = list_entry (e, struct thread, allelem);
+         if(ifRunning){
+           if(t->status == THREAD_RUNNING){
+             printf("\n %d | %s | %d | %s |", t->tid, t->name,t->priority,thead_status_name[t->status]);
+             printf(" %d \n", timer_get_timestamp() - t->startTime);
+           }
+         }else{
+           printf("\n %d | %s | %d | %s |", t->tid, t->name,t->priority,thead_status_name[t->status]);
+           if(t->status == THREAD_RUNNING)
+             printf(" %d \n", t->timetick);
+           else
+             printf("\n");
+         }
+     }
+}
+
+void setEnablePriority(int value){
+  enablePriority = value;
+}
+

@@ -67,7 +67,7 @@ static void dummy_handler(struct interrupts_stack_frame *stack_frame);
  * Note: By the default the FIQ interruptions will remain disabled.
  */
 void interrupts_init(void) {
-  printf("\nInitializing interrupts.....");
+  if(!(output&miscoff)) printf("\nInitializing interrupts.....");
   int32_t i;
 
   was_irq_generated = false;
@@ -223,7 +223,7 @@ void interrupts_dispatch_irq(struct interrupts_stack_frame *stack_frame) {;
   int32_t i;
   // First half of the pending interrupts (0-31)
   int32_t *interrupt_ptr = (int32_t *) INTERRUPT_REGISTER_PENDING_IRQ_0_31;
-  printf("\n interrupt number first32--------------------%d-----------------------\n",*interrupt_ptr);
+  if(output&tsk3) printf("\n interrupt number first32--------------------%d-----------------------\n",*interrupt_ptr);
   for (i = 0; i < IRQ_COUNT / 2; i++) {
       bool enable = *interrupt_ptr & (1 << i);
       if (enable) {
@@ -233,7 +233,7 @@ void interrupts_dispatch_irq(struct interrupts_stack_frame *stack_frame) {;
 
   // Second half of the pending interrupts (32-63)
   interrupt_ptr = (int32_t *) INTERRUPT_REGISTER_PENDING_IRQ_32_63;
-  printf("\n interrupt number second32--------------------%d-----------------------\n",*interrupt_ptr);
+  if(output&tsk3) printf("\n interrupt number second32--------------------%d-----------------------\n",*interrupt_ptr);
   for (i = 0; i < IRQ_COUNT / 2; i++) {
       bool enable = *interrupt_ptr & (1 << i);
       if (enable) {
@@ -264,7 +264,7 @@ void interrupts_dispatch_swi(struct interrupts_stack_frame *stack_frame, int32_t
   unsigned short green = 0x7E0;
   int32_t foreColour = GetForeColour();
   SetForeColour(green);
-  printf("\nInterrupt SWI handler: #%d", swi_number);
+  if(!(output&miscoff)) printf("\nInterrupt SWI handler: #%d", swi_number);
   SetForeColour(foreColour);
 }
 
@@ -296,7 +296,7 @@ static void interrupts_dispatch_pending_irq(struct interrupts_stack_frame *stack
 
 /* Dummy interrupt handler. */
 static void dummy_handler(struct interrupts_stack_frame *stack_frame) {
-  printf("\nDummy Interrupt handler......");
+  if(!(output&miscoff)) printf("\nDummy Interrupt handler......");
 }
 
 /* Returns true if the IRQ number is valid, otherwise false. */

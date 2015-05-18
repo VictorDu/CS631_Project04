@@ -3,11 +3,12 @@
 #include <stddef.h>
 #include <stdint.h>
 #include <string.h>
-
+#include "../threads/dbg_msg.h"
 #include "serial.h"
 #include "bcm2835.h"
 
 #define IRQ_57 57       // IRQ for input
+
 
 void serial_init(void) {
   test_serial();
@@ -84,12 +85,32 @@ enum
 };
 
 static void uart_irq_handler(struct interrupts_stack_frame *stack_frame) {
-  printf("\nKernel - Uart Interrupt Handler.");
-  printf("\n The control is %d\n",mmio_read(UART0_FR));
+  if(output&tsk3) printf("\nKernel - Uart Interrupt Handler.");
+  //printf("\n The control is %d\n",mmio_read(UART0_FR));
+  //interrupts_disable();
+
+  //int i = 0;
+  int flag = 0;
   while(!(mmio_read(UART0_FR) & (1 << 4))){
-    printf("\n The data is %d\n",mmio_read(UART0_DR));
+    buffer[bufferPointer++] = mmio_read(UART0_DR);
+    printf("%c",buffer[bufferPointer-1]);
+    if(buffer[bufferPointer-1] == 13){
+      flag = 1;
+      buffer[bufferPointer-1]='\0';
+    }
   }
-  printf("\n The control is %d\n",mmio_read(UART0_FR));
+  buffer[bufferPointer] = '\0';
+  if(flag == 1){
+  if(output&tsk5) printf("\n <uart_irq_handler> charactor buffed\n");
+  unblockShellThread();
+  if(output&tsk5) printf("\n <uart_irq_handler> charactor buffed\n");
+  }
+
+  //thread_unblock(shellThread);
+  //interrupts_enable();
+
+
+  //printf("\n The control is %d\n",mmio_read(UART0_FR));
 
   //mmio_write(UART0_CR, 0x00000000);
 
@@ -98,7 +119,7 @@ static void uart_irq_handler(struct interrupts_stack_frame *stack_frame) {
   //timer_reset_timer_compare(IRQ_1);
   //thread_tick(stack_frame);
   //timer_msleep(1000000);
-  timer_busy_msleep(300000);
+  //timer_busy_msleep(300000);
   // The System Timer compare register has to be set up with the new time after the timer interrupt.
   //timer_set_interval(IRQ_1, TIMER_PERIODIC_INTERVAL);
 }
@@ -189,3 +210,12 @@ void test_serial() {
 
   uart_init();
 }
+
+void setBufferPointer(int v){
+  bufferPointer = v;
+}
+
+char* getBuffer(){
+  return buffer;
+}
+

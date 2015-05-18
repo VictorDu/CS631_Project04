@@ -22,6 +22,7 @@ enum thread_status {
   THREAD_DYING          /* About to be destroyed. */
 };
 
+
 /* Thread identifier type.
    You can redefine this to whatever type you like. */
 typedef int32_t tid_t;
@@ -106,6 +107,8 @@ struct thread {
 
   /* Owned by thread.c. */
   uint32_t magic;               /* Detects stack overflow. */
+  uint32_t startTime;
+  uint32_t timetick;
 };
 
 /*by:team01  element of waitList that represents a thread id that waiting for thread tid*/
@@ -156,4 +159,8 @@ void thread_set_nice (int);
 int thread_get_recent_cpu (void);
 int thread_get_load_avg (void);
 struct thread *getThreadById(tid_t id);
+void setShellThread(struct thread* s);
+void unblockShellThread();
+void printAllThreadInfor();
+void setEnablePriority(int value);
 #endif /* THREADS_THREAD_H_ */

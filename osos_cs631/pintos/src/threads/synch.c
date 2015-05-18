@@ -111,11 +111,13 @@ sema_up (struct semaphore *sema)
   enum interrupts_level old_level;
 
   ASSERT (sema != NULL);
-
+  //printf("1\n");
   old_level = interrupts_disable ();
+  //printf("2\n");
   if (!list_empty (&sema->waiters)) 
     thread_unblock (list_entry (list_pop_front (&sema->waiters),
                                 struct thread, elem));
+  //printf("3\n");
   sema->value++;
   interrupts_set_level (old_level);
 }
