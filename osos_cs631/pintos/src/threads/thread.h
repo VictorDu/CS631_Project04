@@ -108,6 +108,7 @@ struct thread {
   /* Owned by thread.c. */
   uint32_t magic;               /* Detects stack overflow. */
   uint32_t startTime;
+  uint32_t timetick;
 };
 
 /*by:team01  element of waitList that represents a thread id that waiting for thread tid*/

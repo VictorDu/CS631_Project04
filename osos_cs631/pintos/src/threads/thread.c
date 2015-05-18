@@ -144,6 +144,7 @@ static void init_thread (struct thread *t, const char *name, int priority) {
   strlcpy (t->name, name, sizeof t->name);
   /* Sets the stack. It's a full descending stack.*/
   t->stack_frame.r13_sp = get_current_sp();
+  t->timetick = 0;
   t->priority = priority;
   t->magic = THREAD_MAGIC;
   list_push_back (&all_list, &t->allelem);
@@ -201,6 +202,7 @@ void thread_tick (struct interrupts_stack_frame *stack_frame) {
   if (t == idle_thread) {
       idle_ticks++;
   } else {
+    t->timetick++;
       kernel_ticks++;
   }
   //by team01
@@ -754,7 +756,7 @@ void unblockShellThread(){
 
 void printAllThreadInfor(int ifRunning){
   struct list_elem *e;
-  printf("\n TID |        name        | Priority | Status | Running Time \n");
+  printf("\n TID | Name | Priority | Status | Running Time \n");
     for (e = list_begin (&all_list); e != list_end (&all_list);
          e = list_next (e)) {
          struct thread *t = list_entry (e, struct thread, allelem);
@@ -766,7 +768,7 @@ void printAllThreadInfor(int ifRunning){
          }else{
            printf("\n %d | %s | %d | %s |", t->tid, t->name,t->priority,thead_status_name[t->status]);
            if(t->status == THREAD_RUNNING)
-             printf(" %d \n", timer_get_timestamp() - t->startTime);
+             printf(" %d \n", t->timetick);
            else
              printf("\n");
          }
