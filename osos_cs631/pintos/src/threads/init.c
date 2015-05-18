@@ -31,24 +31,28 @@ void ts(char **args);
 void pRun(char **args);
 void bg(char **args);
 void help(char **args);
+void priority(char **args);
+
 
 char *builtinCmd[]={
     "ts",
     "run",
     "bg",
-    "help"
+    "help",
+    "priority"
 };
 
 void (*builtinFunc[])(char **)={
     &ts,
     &pRun,
     &bg,
-    &help
+    &help,
+    &priority
 };
 
 
 /* Tasks for the Threads. */
-
+#define TestcaseSize 7
 static void hello_test(void *);
 
 struct wait_node {
@@ -63,17 +67,11 @@ static struct wait_node sync_node;
 static void t_wait(struct wait_node *wn);
 static void t_exit(struct wait_node *wn);
 static void cv_test(void *);
+static void hello_test(void *aux);
 
 static tid_t waitTidForTest1;
 
 static struct semaphore task_sem;
-
-/*
- * kernel.c
- *
- *  Created on: Oct 22, 2014
- *      Author: jcyescas
- */
 
 static void test_swi_interrupt() {
   unsigned short green = 0x7E0;
@@ -111,6 +109,24 @@ static void task5(void *aux){
     printf("%d\n",5);
   }
 }
+char *builtinTest[]={
+    "hello",
+    "cv",
+    "task1",
+    "task2",
+    "task3",
+    "task4",
+    "task5"
+};
+void (*builtinTestFunc[])()={
+    &hello_test,
+    &cv_test,
+    &task1,
+    &task2,
+    &task3,
+    &task4,
+    &task5
+};
 
 /*by team01 : Shell Function implements*/
 
@@ -148,17 +164,101 @@ void ts(char**args){
     printAllThreadInfor(0);
   else
     printAllThreadInfor(1);
-
 }
+
+void priority(char **args){
+  if(args[1] != NULL && strcmp(args[1],"-on")==0){
+    setEnablePriority(1);
+    printf("System will use priority to choose thread! \n");
+  }else if(args[1] != NULL && strcmp(args[1],"-off")==0){
+    setEnablePriority(0);
+    printf("System will rotation to choose thread! \n");
+  }else
+    printf("\n<priority> Parameters cannot be recognized\n");
+}
+
+
 void pRun(char** args){
-  printf("\n<pRun> exec func %s\n",args[1]);
+  int priority = PRI_DEFAULT;
+  char* name = "No name";
+  if(args[1] == NULL){
+    printf("\n Less Parameters!\n");
+    return;
+  }
+  void (* func) () = NULL;
+  int i;
+  for(i=0;i<CommandSize;i++){
+    if(strcmp(args[1],builtinTest[i])==0){
+      func = builtinTestFunc[i];
+    }
+  }
+  if(func == NULL){
+    printf("\n No this function!\n");
+    return;
+  }
+  if(args[2] != NULL){
+    int i,num=0;
+    for(i=0;args[2][i]!='\0';i++){
+      if(args[2][i] > '9' || args[2][i] < '0'){
+        printf("\n Priority input error!\n");
+        return;
+      }
+      num=num*10+(args[2][i]-'0');
+    }
+    priority = num;
+    if(priority < PRI_MIN || priority > PRI_MAX){
+      printf("\n The priority is out of range!\n");
+      return;
+    }
+  }
+  if(args[3] != NULL)
+    name = args[3];
+  tid_t tid = thread_create(name, priority, func, NULL);
+  wait(tid);
 }
 void bg(char** args){
-  printf("\n<bg> exec background func %s",args[1]);
+  //bg task1 40 thread1
+  int priority = PRI_DEFAULT;
+  char* name = "No name";
+  if(args[1] == NULL){
+    printf("\n Less Parameters!\n");
+    return;
+  }
+  void (* func) () = NULL;
+  int i;
+  for(i=0;i<CommandSize;i++){
+    if(strcmp(args[1],builtinTest[i])==0){
+      func = builtinTestFunc[i];
+    }
+  }
+  if(func == NULL){
+    printf("\n No this function!\n");
+    return;
+  }
+  if(args[2] != NULL){
+    int i,num=0;
+    for(i=0;args[2][i]!='\0';i++){
+      if(args[2][i] > '9' || args[2][i] < '0'){
+        printf("\n Priority input error!\n");
+        return;
+      }
+      num=num*10+(args[2][i]-'0');
+    }
+    priority = num;
+    if(priority < PRI_MIN || priority > PRI_MAX){
+      printf("\n The priority is out of range!\n");
+      return;
+    }
+  }
+  if(args[3] != NULL)
+    name = args[3];
+  thread_create(name, priority, func, NULL);
+  //printf("\n<bg> exec background func %s",args[1]);
 }
 void help(char** args){
   printf("\n--------<Help Info>----------\n");
 }
+
 
 void exec(char *cmd){
   if(output&tsk5) printf("\n exec(%s)", cmd);

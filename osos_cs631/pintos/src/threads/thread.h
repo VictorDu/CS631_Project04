@@ -161,4 +161,5 @@ struct thread *getThreadById(tid_t id);
 void setShellThread(struct thread* s);
 void unblockShellThread();
 void printAllThreadInfor();
+void setEnablePriority(int value);
 #endif /* THREADS_THREAD_H_ */

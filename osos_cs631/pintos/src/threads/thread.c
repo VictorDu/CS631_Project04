@@ -51,6 +51,7 @@ static struct list waitList;
 static struct list timeWaitList;
 static struct thread* shellThread;
 static char* thead_status_name[] = {"RUNNING", "READY" , "BLOCK", "DYING"};
+static int enablePriority = 0;
 
 
 
@@ -591,9 +592,10 @@ static struct thread* thread_get_next_thread_to_run(void) {
   if (list_empty(&ready_list)) {
       return idle_thread;
   } else {
-    int priority = -1;
-    struct list_elem *e, *result;
-    for (e = list_begin (&ready_list); e != list_end (&ready_list);
+    if(enablePriority){
+      int priority = -1;
+      struct list_elem *e, *result;
+      for (e = list_begin (&ready_list); e != list_end (&ready_list);
          e = list_next (e)) {
          struct thread *t = list_entry (e, struct thread, elem);
          if(t->priority > priority){
@@ -601,12 +603,13 @@ static struct thread* thread_get_next_thread_to_run(void) {
            result = e;
            priority = t->priority;
          }
-     }
-    struct thread *t = list_entry (result, struct thread, elem);
-    if((output)&tsk4) printf("\n <thread_get_next_thread_to_run> next thread to run is %d \n",t->tid);
-    list_remove(result);
-    return t;
-
+      }
+      struct thread *t = list_entry (result, struct thread, elem);
+      if((output)&tsk4) printf("\n <thread_get_next_thread_to_run> next thread to run is %d \n",t->tid);
+        list_remove(result);
+      return t;
+    }else
+      return list_entry (list_pop_front (&ready_list), struct thread, elem);
   }
 }
 
@@ -768,5 +771,9 @@ void printAllThreadInfor(int ifRunning){
              printf("\n");
          }
      }
+}
+
+void setEnablePriority(int value){
+  enablePriority = value;
 }
 
