@@ -24,6 +24,29 @@
 /* -ul: Maximum number of pages to put into palloc's user pool. */
 static size_t user_page_limit = SIZE_MAX;
 
+/*Following tutorial at http://stephen-brennan.com/2015/01/16/write-a-shell-in-c/*/
+/*define command functions*/
+#define CommandSize 4
+void ts(char **args);
+void pRun(char **args);
+void bg(char **args);
+void help(char **args);
+
+char *builtinCmd[]={
+    "ts",
+    "run",
+    "bg",
+    "help"
+};
+
+void (*builtinFunc[])(char **)={
+    &ts,
+    &pRun,
+    &bg,
+    &help
+};
+
+
 /* Tasks for the Threads. */
 
 static void hello_test(void *);
@@ -89,8 +112,64 @@ static void task5(void *aux){
   }
 }
 
+/*by team01 : Shell Function implements*/
+
+char** parseLine(char *line){
+  char **tokens=malloc(sizeof(char *)*10);//we have two tokens per command maximum
+  char *token,*savedPtr;
+  int pos=0;
+  token=strtok_r(line," ",&savedPtr);
+  while(token!=NULL){
+    tokens[pos]=token;
+    pos++;
+    token=strtok_r(NULL," ",&savedPtr);
+  }
+  tokens[pos]=NULL;//command end with a NULL
+  return tokens;
+}
+
+void execLine(char**tokens){
+  int i;
+  if(tokens[0]==NULL)
+    return;
+  for(i=0;i<CommandSize;i++){
+    if(strcmp(tokens[0],builtinCmd[i])==0){
+      (*builtinFunc[i])(tokens);
+      return;
+    }
+  }
+  printf("\n No such a Command!\n");
+}
+
+//by team01, Commands: Noted that args[0] is the command, args[1](if there is) is actual argument or no argument
+void ts(char**args){
+  //printf("\n<ts> the function is exec\n");
+  if(args[1] != NULL && strcmp(args[1],"-a")==0)
+    printAllThreadInfor(0);
+  else
+    printAllThreadInfor(1);
+
+}
+void pRun(char** args){
+  printf("\n<pRun> exec func %s\n",args[1]);
+}
+void bg(char** args){
+  printf("\n<bg> exec background func %s",args[1]);
+}
+void help(char** args){
+  printf("\n--------<Help Info>----------\n");
+}
+
 void exec(char *cmd){
-  printf("exec(%s)", cmd);
+  if(output&tsk5) printf("\n exec(%s)", cmd);
+  char ** args=parseLine(cmd);
+  if(output&tsk5){
+    printf("\n <exec> tokenized command: ");
+    int i;
+    for(i=0;args[i]!=NULL&&i<10;i++)
+    printf("[%s] ",args[i]);
+  }
+  execLine(args);
 }
 
 static void shell(void *aux){
@@ -101,22 +180,9 @@ static void shell(void *aux){
     interrupts_disable();
     thread_block();
 
-    if(output&tsk5) printf("\n<shell> Recieved charactor\n");
-    int i;
-    for(i=0;i<strlen(buffer);i++){
-      if(buffer[i]=='\n'){
-        finish=1;
-        buffer[i] = '\0';
-        break;
-      }
-    }
-    if(output&tsk5) printf("\n<shell> ready to strcat\n ");
-    strlcat(command, buffer, strlen(command) + strlen(buffer) );
-    if(output&tsk5) printf("\n<shell> finish to strcat\n ");
-    if(finish){
+    command = getBuffer();
       exec(command);
-      command = "";
-    }
+
     setBufferPointer(0);
     interrupts_enable();
   }

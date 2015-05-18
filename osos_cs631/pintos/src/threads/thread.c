@@ -50,6 +50,8 @@ static struct list all_list;
 static struct list waitList;
 static struct list timeWaitList;
 static struct thread* shellThread;
+static char* thead_status_name[] = {"RUNNING", "READY" , "BLOCK", "DYING"};
+
 
 
 /* Idle thread. */
@@ -248,6 +250,7 @@ tid_t thread_create(const char *name, int32_t priority,
 
   // Setting the tid number.
   tid = thread->tid = allocate_tid();
+  thread->startTime = timer_get_timestamp();
 
   thread->status = THREAD_BLOCKED;
   strlcpy(thread->name, name, sizeof thread->name);
@@ -745,3 +748,25 @@ void unblockShellThread(){
   if(shellThread->status == THREAD_BLOCKED)
   thread_unblock(shellThread);
 }
+
+void printAllThreadInfor(int ifRunning){
+  struct list_elem *e;
+  printf("\n TID |        name        | Priority | Status | Running Time \n");
+    for (e = list_begin (&all_list); e != list_end (&all_list);
+         e = list_next (e)) {
+         struct thread *t = list_entry (e, struct thread, allelem);
+         if(ifRunning){
+           if(t->status == THREAD_RUNNING){
+             printf("\n %d | %s | %d | %s |", t->tid, t->name,t->priority,thead_status_name[t->status]);
+             printf(" %d \n", timer_get_timestamp() - t->startTime);
+           }
+         }else{
+           printf("\n %d | %s | %d | %s |", t->tid, t->name,t->priority,thead_status_name[t->status]);
+           if(t->status == THREAD_RUNNING)
+             printf(" %d \n", timer_get_timestamp() - t->startTime);
+           else
+             printf("\n");
+         }
+     }
+}
+

@@ -94,8 +94,10 @@ static void uart_irq_handler(struct interrupts_stack_frame *stack_frame) {
   while(!(mmio_read(UART0_FR) & (1 << 4))){
     buffer[bufferPointer++] = mmio_read(UART0_DR);
     printf("%c",buffer[bufferPointer-1]);
-    if(buffer[bufferPointer-1] == 13)
+    if(buffer[bufferPointer-1] == 13){
       flag = 1;
+      buffer[bufferPointer-1]='\0';
+    }
   }
   buffer[bufferPointer] = '\0';
   if(flag == 1){
@@ -211,5 +213,9 @@ void test_serial() {
 
 void setBufferPointer(int v){
   bufferPointer = v;
+}
+
+char* getBuffer(){
+  return buffer;
 }
 

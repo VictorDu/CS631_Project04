@@ -13,6 +13,7 @@ void test_serial();
 void setBufferPointer(int v);
 static char buffer[100];
 static int bufferPointer;
+char* getBuffer();
 //static struct semaphore shellSema;
 
 
