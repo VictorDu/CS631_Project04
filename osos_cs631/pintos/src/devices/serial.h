@@ -14,6 +14,7 @@ void setBufferPointer(int v);
 static char buffer[100];
 static int bufferPointer;
 char* getBuffer();
+void enableInput(int value);
 //static struct semaphore shellSema;
 
 

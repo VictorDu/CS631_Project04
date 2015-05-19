@@ -768,7 +768,7 @@ void printAllThreadInfor(int ifRunning){
          }else{
            printf("\n %d | %s | %d | %s |", t->tid, t->name,t->priority,thead_status_name[t->status]);
            if(t->status == THREAD_RUNNING)
-             printf(" %d \n", t->timetick);
+             printf(" %d \n", timer_get_timestamp() - t->startTime);
            else
              printf("\n");
          }

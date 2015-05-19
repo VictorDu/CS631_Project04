@@ -112,6 +112,30 @@ static void busyWaitTask(){
 static void nonBusyWaitTask(){
   timer_msleep(5000000000);
 }
+
+static void hello_test(void *aux) {
+  printf("\n-------------------------------\n");
+  printf("<hello_test>Hello from OsOS\n");
+  printf("\n");
+  waitTidForTest1=thread_current()->tid;
+  if(output&tsk2)  printf("dbg: <hello_test> I'm sleeping....\n");
+  timer_msleep(5000000);
+  if(output&tsk2)  printf("dbg: <hello_test> I'm awake........\n");
+  printf("\n<hello_test> hello_test Done! should be the first----------------------\n");
+
+  //sema_up(&task_sem);
+}
+
+static void cv_test(void *aux) {
+  printf("\n-----------------------------------\n");
+  printf("\n<cv_test> Hello from CV Test\n");
+  if(output&tsk1)printf("\ndbg: <cv_test> I'm waiting for a thread........");
+  wait(waitTidForTest1);
+  if(output&tsk1)printf("\ndbg: <cv_test> finish waiting!");
+  printf("\n<cv_test> CV_test done!! should be the second----------------------\n");
+  //t_exit(&sync_node);
+}
+
 static void bg_test(void *aux){
   thread_create("BusyWait", 41, &busyWaitTask, NULL);
   thread_create("NoneBusyWait",41, &nonBusyWaitTask, NULL);
@@ -124,20 +148,28 @@ static void p_test(void *aux){
     thread_create("Task4", 44, &task4, NULL);
 }
 
-#define TestcaseSize 5
+static void wait_test(void *aux){
+  printf("\nNote:This test is showing that CV waiting for Hello to finish\n");
+  thread_create("Hello", 41, &hello_test, NULL);
+  thread_create("CV",41, &cv_test, NULL);
+}
+
+#define TestcaseSize 6
 char *builtinTest[]={
     "hello",
     "cv",
     "task1",
     "p_test",
-    "bg_test"
+    "bg_test",
+    "wait_test"
 };
 void (*builtinTestFunc[])()={
     &hello_test,
     &cv_test,
     &task1,
     &p_test,
-    &bg_test
+    &bg_test,
+    &wait_test
 };
 
 /*by team01 : Shell Function implements*/
@@ -229,9 +261,11 @@ tid_t runThread(char** args){
 
 void pRun(char** args){
   interrupts_disable();
+  enableInput(0);
   tid_t t = runThread(args);
   if(t != -1)
     wait(t);
+  enableInput(1);
   //interrupts_enable();
 }
 void bg(char** args){
@@ -363,18 +397,7 @@ void init() {
 
 
 
-static void hello_test(void *aux) {
-  printf("\n-------------------------------\n");
-  printf("<hello_test>Hello from OsOS\n");
-  printf("\n");
-  waitTidForTest1=thread_current()->tid;
-  if(output&tsk2)  printf("dbg: <hello_test> I'm sleeping....\n");
-  timer_msleep(5000000);
-  if(output&tsk2)  printf("dbg: <hello_test> I'm awake........\n");
-  printf("\n<hello_test> hello_test Done! should be the first----------------------\n");
 
-  //sema_up(&task_sem);
-}
 
 static void t_wait(struct wait_node *wn)
 {
@@ -394,15 +417,7 @@ static void t_exit(struct wait_node *wn)
   lock_release(&wn->mutex);
 }
 
-static void cv_test(void *aux) {
-  printf("\n-----------------------------------\n");
-  printf("\n<cv_test> Hello from CV Test\n");
-  if(output&tsk1)printf("\ndbg: <cv_test> I'm waiting for a thread........");
-  wait(waitTidForTest1);
-  if(output&tsk1)printf("\ndbg: <cv_test> finish waiting!");
-  printf("\n<cv_test> CV_test done!! should be the second----------------------\n");
-  //t_exit(&sync_node);
-}
+
 
 
 
