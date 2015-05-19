@@ -8,14 +8,12 @@
 #include "bcm2835.h"
 
 #define IRQ_57 57       // IRQ for input
-
+static int enable = 1;
 
 void serial_init(void) {
   test_serial();
 }
 void serial_putc (char character) {
-  //uart_putc(96);
-  //uart_putc('B');
   uart_putc(character);
 }
 void serial_flush (void) {
@@ -84,44 +82,28 @@ enum
     UART0_TDR    = (UART0_BASE + 0x8C),
 };
 
+//By team01
 static void uart_irq_handler(struct interrupts_stack_frame *stack_frame) {
-  if(output&tsk3) printf("\nKernel - Uart Interrupt Handler.");
-  //printf("\n The control is %d\n",mmio_read(UART0_FR));
+    if(output&tsk3) printf("\nKernel - Uart Interrupt Handler.");
   //interrupts_disable();
-
-  //int i = 0;
-  int flag = 0;
-  while(!(mmio_read(UART0_FR) & (1 << 4))){
-    buffer[bufferPointer++] = mmio_read(UART0_DR);
-    printf("%c",buffer[bufferPointer-1]);
-    if(buffer[bufferPointer-1] == 13){
-      flag = 1;
-      buffer[bufferPointer-1]='\0';
+    int flag = 0;
+    while(!(mmio_read(UART0_FR) & (1 << 4))){
+      buffer[bufferPointer++] = mmio_read(UART0_DR);
+      printf("%c",buffer[bufferPointer-1]);
+      if(buffer[bufferPointer-1] == 13){
+        flag = 1;
+        buffer[bufferPointer-1]='\0';
+      }
     }
-  }
-  buffer[bufferPointer] = '\0';
-  if(flag == 1){
-  if(output&tsk5) printf("\n <uart_irq_handler> charactor buffed\n");
-  unblockShellThread();
-  if(output&tsk5) printf("\n <uart_irq_handler> charactor buffed\n");
-  }
-
-  //thread_unblock(shellThread);
-  //interrupts_enable();
-
-
-  //printf("\n The control is %d\n",mmio_read(UART0_FR));
-
-  //mmio_write(UART0_CR, 0x00000000);
-
-  //uint32_t abc = *(UART0_CR);
-  // The System Timer compare has to be reseted after the timer interrupt.
-  //timer_reset_timer_compare(IRQ_1);
-  //thread_tick(stack_frame);
-  //timer_msleep(1000000);
-  //timer_busy_msleep(300000);
-  // The System Timer compare register has to be set up with the new time after the timer interrupt.
-  //timer_set_interval(IRQ_1, TIMER_PERIODIC_INTERVAL);
+    buffer[bufferPointer] = '\0';
+    if(flag == 1){
+      if(output&tsk5) printf("\n <uart_irq_handler> charactor buffed\n");
+      if(enable)
+      unblockShellThread();
+      else
+        bufferPointer = 0;
+      if(output&tsk5) printf("\n <uart_irq_handler> charactor buffed\n");
+    }
 }
 
 void uart_init()
@@ -217,5 +199,9 @@ void setBufferPointer(int v){
 
 char* getBuffer(){
   return buffer;
+}
+
+void enableInput(int value){
+  enable = value;
 }
 
