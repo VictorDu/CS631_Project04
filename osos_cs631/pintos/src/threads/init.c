@@ -1,4 +1,3 @@
-
 #include <debug.h>
 #include <random.h>
 #include <stdbool.h>
@@ -33,23 +32,15 @@ void bg(char **args);
 void help(char **args);
 void priority(char **args);
 
+char *builtinCmd[] = { "ts", "run", "bg", "help", "priority" };
 
-char *builtinCmd[]={
-    "ts",
-    "run",
-    "bg",
-    "help",
-    "priority"
+void (*builtinFunc[])(char **)= {
+  &ts,
+  &pRun,
+  &bg,
+  &help,
+  &priority
 };
-
-void (*builtinFunc[])(char **)={
-    &ts,
-    &pRun,
-    &bg,
-    &help,
-    &priority
-};
-
 
 /* Tasks for the Threads. */
 
@@ -61,8 +52,6 @@ struct wait_node {
   bool done;
 };
 static struct wait_node sync_node;
-
-
 
 static void t_wait(struct wait_node *wn);
 static void t_exit(struct wait_node *wn);
@@ -81,47 +70,58 @@ static void test_swi_interrupt() {
   generate_swi_interrupt(); // Function defined in interrupts.s
 }
 
-static void task1(void *aux){
+static void task1(void *aux) {
+  printf("\n Task 1 begin to run..\n");
   int i;
-  for(i = 0;i<50;i++){
-    printf("%d\n",1);
+  for (i = 0; i < 70; i++) {
+    //printf("%d\n",1);
   }
+  printf("\n ...Task 1 end\n");
 }
-static void task2(void *aux){
+static void task2(void *aux) {
+  printf("\n Task 2 begin to run..\n");
   int i;
-  for(i = 0;i<50;i++){
-    printf("%d\n",2);
+  for (i = 0; i < 50; i++) {
+    //printf("%d\n",2);
   }
+  printf("\n ...Task 2 end\n");
 }
-static void task3(void *aux){
+static void task3(void *aux) {
+  printf("\n Task 3 begin to run..\n");
   int i;
-  for(i = 0;i<50;i++){
-    printf("%d\n",3);
+  for (i = 0; i < 100; i++) {
+    //printf("%d\n",3);
   }
+  printf("\n ...Task 3 end\n");
 }
-static void task4(void *aux){
+static void task4(void *aux) {
+  printf("\n Task 4 begin to run..\n");
   int i;
-  for(i = 0;i<50;i++){
-    printf("%d\n",4);
+  for (i = 0; i < 90; i++) {
+    //printf("%d\n",4);
   }
+  printf("\n ...Task 4 end\n");
 }
 
-static void busyWaitTask(){
-  timer_busy_msleep(5000000000);
+static void busyWaitTask() {
+  timer_busy_msleep(10000000); //sleep for 10s
 }
-static void nonBusyWaitTask(){
-  timer_msleep(5000000000);
+static void nonBusyWaitTask() {
+  timer_msleep(10000000); //sleep for 10s
 }
 
 static void hello_test(void *aux) {
   printf("\n-------------------------------\n");
   printf("<hello_test>Hello from OsOS\n");
   printf("\n");
-  waitTidForTest1=thread_current()->tid;
-  if(output&tsk2)  printf("dbg: <hello_test> I'm sleeping....\n");
+  waitTidForTest1 = thread_current()->tid;
+  if (output & tsk2)
+    printf("dbg: <hello_test> I'm sleeping....\n");
   timer_msleep(5000000);
-  if(output&tsk2)  printf("dbg: <hello_test> I'm awake........\n");
-  printf("\n<hello_test> hello_test Done! should be the first----------------------\n");
+  if (output & tsk2)
+    printf("dbg: <hello_test> I'm awake........\n");
+  printf(
+      "\n<hello_test> hello_test Done! should be the first----------------------\n");
 
   //sema_up(&task_sem);
 }
@@ -129,296 +129,273 @@ static void hello_test(void *aux) {
 static void cv_test(void *aux) {
   printf("\n-----------------------------------\n");
   printf("\n<cv_test> Hello from CV Test\n");
-  if(output&tsk1)printf("\ndbg: <cv_test> I'm waiting for a thread........");
+  if (output & tsk1)
+    printf("\ndbg: <cv_test> I'm waiting for a thread........");
   wait(waitTidForTest1);
-  if(output&tsk1)printf("\ndbg: <cv_test> finish waiting!");
-  printf("\n<cv_test> CV_test done!! should be the second----------------------\n");
+  if (output & tsk1)
+    printf("\ndbg: <cv_test> finish waiting!");
+  printf(
+      "\n<cv_test> CV_test done!! should be the second----------------------\n");
   //t_exit(&sync_node);
 }
 
-static void bg_test(void *aux){
+static void bg_test(void *aux) {
   thread_create("BusyWait", 41, &busyWaitTask, NULL);
-  thread_create("NoneBusyWait",41, &nonBusyWaitTask, NULL);
+  thread_create("NoneBusyWait", 41, &nonBusyWaitTask, NULL);
 }
 
-static void p_test(void *aux){
-    thread_create("Task1", 41, &task1, NULL);
-    thread_create("Task2", 42, &task2, NULL);
-    thread_create("Task3", 43, &task3, NULL);
-    thread_create("Task4", 44, &task4, NULL);
-}
-
-static void wait_test(void *aux){
-  printf("\nNote:This test is showing that CV waiting for Hello to finish\n");
-  thread_create("Hello", 41, &hello_test, NULL);
-  thread_create("CV",41, &cv_test, NULL);
-}
-
-#define TestcaseSize 6
-char *builtinTest[]={
-    "hello",
-    "cv",
-    "task1",
-    "p_test",
-    "bg_test",
-    "wait_test"
-};
-void (*builtinTestFunc[])()={
-    &hello_test,
-    &cv_test,
-    &task1,
-    &p_test,
-    &bg_test,
-    &wait_test
-};
-
-/*by team01 : Shell Function implements*/
-
-char** parseLine(char *line){
-  char **tokens=malloc(sizeof(char *)*10);//we have two tokens per command maximum
-  char *token,*savedPtr;
-  int pos=0;
-  token=strtok_r(line," ",&savedPtr);
-  while(token!=NULL){
-    tokens[pos]=token;
-    pos++;
-    token=strtok_r(NULL," ",&savedPtr);
-  }
-  tokens[pos]=NULL;//command end with a NULL
-  return tokens;
-}
-
-void execLine(char**tokens){
-  int i;
-  if(tokens[0]==NULL)
-    return;
-  for(i=0;i<CommandSize;i++){
-    if(strcmp(tokens[0],builtinCmd[i])==0){
-      (*builtinFunc[i])(tokens);
-      return;
-    }
-  }
-  printf("\n No such a Command!\n");
-}
-
-//by team01, Commands: Noted that args[0] is the command, args[1](if there is) is actual argument or no argument
-void ts(char**args){
-  //printf("\n<ts> the function is exec\n");
-  if(args[1] != NULL && strcmp(args[1],"-a")==0)
-    printAllThreadInfor(0);
-  else
-    printAllThreadInfor(1);
-}
-
-void priority(char **args){
-  if(args[1] != NULL && strcmp(args[1],"-on")==0){
-    setEnablePriority(1);
-    printf("\n System will use priority to choose thread! \n");
-  }else if(args[1] != NULL && strcmp(args[1],"-off")==0){
-    setEnablePriority(0);
-    printf("\n System will rotation to choose thread! \n");
-  }else
-    printf("\n<priority> Parameters cannot be recognized\n");
-}
-
-tid_t runThread(char** args){
-  int priority = PRI_DEFAULT;
-  char* name = "No name";
-  if(args[1] == NULL){
-    printf("\n Less Parameters!\n");
-    return -1;
-  }
-  void (* func) () = NULL;
-  int i;
-  for(i=0;i<TestcaseSize;i++){
-    if(strcmp(args[1],builtinTest[i])==0){
-      func = builtinTestFunc[i];
-    }
-  }
-  if(func == NULL){
-    printf("\n No such a function!\n");
-    return -1;
-  }
-  if(args[2] != NULL){
-    int i,num=0;
-    for(i=0;args[2][i]!='\0';i++){
-      if(args[2][i] > '9' || args[2][i] < '0'){
-        printf("\n Priority input error!\n");
-        return -1;
-      }
-      num=num*10+(args[2][i]-'0');
-    }
-    priority = num;
-    if(priority < PRI_MIN || priority > PRI_MAX){
-      printf("\n The priority is out of range!\n");
-      return -1;
-    }
-  }
-  if(args[3] != NULL)
-    name = args[3];
-  return thread_create(name, priority, func, NULL);
-}
-
-void pRun(char** args){
-  interrupts_disable();
-  enableInput(0);
-  tid_t t = runThread(args);
-  if(t != -1)
-    wait(t);
-  enableInput(1);
-  //interrupts_enable();
-}
-void bg(char** args){
-  //bg task1 40 thread1
-  runThread(args);
-  //printf("\n<bg> exec background func %s",args[1]);
-}
-void help(char** args){
-  printf("\n--------<Help Info>----------\n");
-  printf("1. ts [-a]: Show informations of running threads. \n");
-  printf("  [-a] option will let it show all existing threads.\n");
-  printf("2. run <func_name> [priority] [thread_name] : run function <func_name> as a thread, and wait until it complete.\n");
-  printf("  [priority] option: a integer that specify the priority of the created thread. Default: 31,\n");
-  printf("  [thread_name] option: a string that specify the name of the created thread. Default: No Name.\n");
-  printf("3. bg <func_name> [priority] [thread_name]: run function <func_name> as a new thread, and let it run in back ground.\n");
-  printf("  [priority] option: a integer that specify the priority of the created thread. Default: 31,\n");
-  printf("  [thread_name] option: a string that specify the name of the created thread. Default: No Name.\n");
-  printf("4. priority <-on/off> : A command that enable(-on) or disable(-off) the priority scheduling\n");
-  printf("5. help : Show help information.\n");
-
-}
-
-
-void exec(char *cmd){
-  if(output&tsk5) printf("\n exec(%s)", cmd);
-  char ** args=parseLine(cmd);
-  if(output&tsk5){
-    printf("\n <exec> tokenized command: ");
-    int i;
-    for(i=0;args[i]!=NULL&&i<10;i++)
-    printf("[%s] ",args[i]);
-  }
-  execLine(args);
-}
-
-static void shell(void *aux){
-  char* command = "";
-  int finish = 0;
-  while(true){
-    printf("\nProject04-Shell ~$");
-    interrupts_disable();
-    thread_block();
-
-    command = getBuffer();
-    exec(command);
-
-    setBufferPointer(0);
-    interrupts_enable();
-  }
-}
-
-
-
-/* Initializes the Operating System. The interruptions have to be disabled at entrance.
-*
-*  - Sets interruptions
-*  - Sets the periodic timer
-*  - Set the thread functionality
-*/
-void init() {
-
-  /* Initializes ourselves as a thread so we can use locks,
-    then enable console locking. */
-  thread_init();
-
-  /* Initializes the frame buffer and console. */
-  framebuffer_init();
-  video_init();
-
-  printf("\nOsOs Kernel Initializing");
-
-  /* Initialize memory system. */
-  palloc_init (user_page_limit);
-  malloc_init ();
-
-  /* Initializes the Interrupt System. */
-  interrupts_init();
-  timer_init();
-  serial_init();
-
-
-  thread_start();
-  timer_msleep(5000000);
-  if(output&tsk2) printf("\ndbg: <init> -------back from first sleeping!\n");
-
-  /* Starts preemptive thread scheduling by enabling interrupts. */
-  //thread_start();
-
-  printf("\nFinish booting.");
-
-  /* Initialize the task_sem to coordinate the main thread with workers */
-
-  sema_init(&task_sem, 0);
-
-  //thread_create("Hello Test", PRI_MAX, &hello_test, NULL);
-  //sema_init(&shellSema, 0);
-  tid_t shellThreadId = thread_create("Shell", PRI_MAX, &shell,NULL);
-  struct thread * shellThread = getThreadById(shellThreadId);
- if(shellThread!=NULL)
-  printf("\nshellThread %d loaded\n",shellThread->tid);
- else
-   printf("\n shellThread is NULL\n");
- setShellThread(shellThread);
-
-
-
-  //thread_create("CV Test", PRI_MAX, &cv_test, NULL);
-  sema_down(&task_sem);
- /* int count = 10;
-  while(count > 0){
-    timer_msleep(5000000);
-    printf("\n main thread \n");
-    count--;
-  }*/
-  /*thread_create("Task1", 41, &task1, NULL);
+static void p_test(void *aux) {
+  thread_create("Task1", 41, &task1, NULL);
   thread_create("Task2", 42, &task2, NULL);
   thread_create("Task3", 43, &task3, NULL);
   thread_create("Task4", 44, &task4, NULL);
-  thread_create("Task5", 45, &task5, NULL);*/
-
-  //t_wait(&sync_node);
-
-  printf("\nAll done.");
-  thread_exit ();
 }
 
+static void wait_test(void *aux) {
+  printf("\nNote:This test is showing that CV waiting for Hello to finish\n");
+  thread_create("Hello", 41, &hello_test, NULL);
+  tid_t id = thread_create("CV", 41, &cv_test, NULL);
+  wait(id);
+}
 
+#define TestcaseSize 6
+char *builtinTest[] =
+    { "hello", "cv", "task1", "p_test", "bg_test", "wait_test" };
+void (*builtinTestFunc[])()= {
+  &hello_test,
+  &cv_test,
+  &task1,
+  &p_test,
+  &bg_test,
+  &wait_test
+  };
 
+  /*by team01 : Shell Function implements*/
 
-
-
-
-
-static void t_wait(struct wait_node *wn)
-{
-  lock_acquire(&wn->mutex);
-  while (!wn->done) {
-    cond_wait(&wn->cv, &wn->mutex);
+  char** parseLine(char *line) {
+    char **tokens = malloc(sizeof(char *) * 10); //we have two tokens per command maximum
+    char *token, *savedPtr;
+    int pos = 0;
+    token = strtok_r(line, " ", &savedPtr);
+    while (token != NULL) {
+      tokens[pos] = token;
+      pos++;
+      token = strtok_r(NULL, " ", &savedPtr);
+    }
+    tokens[pos] = NULL; //command end with a NULL
+    return tokens;
   }
-  lock_release(&wn->mutex);
-  wn->done = false;
-}
 
-static void t_exit(struct wait_node *wn)
-{
-  lock_acquire(&wn->mutex);
-  wn->done = true;
-  cond_signal(&wn->cv,&wn->mutex);
-  lock_release(&wn->mutex);
-}
+  void execLine(char**tokens) {
+    int i;
+    if (tokens[0] == NULL)
+      return;
+    for (i = 0; i < CommandSize; i++) {
+      if (strcmp(tokens[0], builtinCmd[i]) == 0) {
+        (*builtinFunc[i])(tokens);
+        return;
+      }
+    }
+    printf("\n No such a Command!\n");
+  }
 
+//by team01, Commands: Noted that args[0] is the command, args[1](if there is) is actual argument or no argument
+  void ts(char**args) {
+    //printf("\n<ts> the function is exec\n");
+    if (args[1] != NULL && strcmp(args[1], "-a") == 0)
+      printAllThreadInfor(0);
+    else
+      printAllThreadInfor(1);
+  }
 
+  void priority(char **args) {
+    if (args[1] != NULL && strcmp(args[1], "-on") == 0) {
+      setEnablePriority(1);
+      printf("\n System will use priority to choose thread! \n");
+    } else if (args[1] != NULL && strcmp(args[1], "-off") == 0) {
+      setEnablePriority(0);
+      printf("\n System will rotation to choose thread! \n");
+    } else
+      printf("\n<priority> Parameters cannot be recognized\n");
+  }
 
+  tid_t runThread(char** args) {
+    int priority = PRI_DEFAULT;
+    char* name = "No name";
+    if (args[1] == NULL) {
+      printf("\n Less Parameters!\n");
+      return -1;
+    }
+    void (*func)() = NULL;
+    int i;
+    for (i = 0; i < TestcaseSize; i++) {
+      if (strcmp(args[1], builtinTest[i]) == 0) {
+        func = builtinTestFunc[i];
+      }
+    }
+    if (func == NULL) {
+      printf("\n No such a function!\n");
+      return -1;
+    }
+    if (args[2] != NULL) {
+      int i, num = 0;
+      for (i = 0; args[2][i] != '\0'; i++) {
+        if (args[2][i] > '9' || args[2][i] < '0') {
+          printf("\n Priority input error!\n");
+          return -1;
+        }
+        num = num * 10 + (args[2][i] - '0');
+      }
+      priority = num;
+      if (priority < PRI_MIN || priority > PRI_MAX) {
+        printf("\n The priority is out of range!\n");
+        return -1;
+      }
+    }
+    if (args[3] != NULL)
+      name = args[3];
+    return thread_create(name, priority, func, NULL);
+  }
 
+  void pRun(char** args) {
+    interrupts_disable();
+    enableInput(0);
+    tid_t t = runThread(args);
+    if (t != -1)
+      wait(t);
+    enableInput(1);
+    //interrupts_enable();
+  }
+  void bg(char** args) {
+    //bg task1 40 thread1
+    runThread(args);
+    //printf("\n<bg> exec background func %s",args[1]);
+  }
+  void help(char** args) {
+    printf("\n------------------<Help Info>--------------------\n");
+    printf("1. ts [-a]: Show informations of running threads. \n");
+    printf("  [-a] option will let it show all existing threads.\n");
+    printf(
+        "2. run <func_name> [priority] [thread_name] : run function <func_name> as a thread, and wait until it complete.\n");
+    printf(
+        "  [priority] option: a integer that specify the priority of the created thread. Default: 31,\n");
+    printf(
+        "  [thread_name] option: a string that specify the name of the created thread. Default: No Name.\n");
+    printf(
+        "3. bg <func_name> [priority] [thread_name]: run function <func_name> as a new thread, and let it run in back ground.\n");
+    printf(
+        "  [priority] option: a integer that specify the priority of the created thread. Default: 31,\n");
+    printf(
+        "  [thread_name] option: a string that specify the name of the created thread. Default: No Name.\n");
+    printf(
+        "4. priority <-on/off> : A command that enable(-on) or disable(-off) the priority scheduling\n");
+    printf("5. help : Show help information.\n");
+    printf("\n------------<Functions discription>----------------\n");
+    printf(
+        "1. p_test: Start 4 different threads with different priorities (Task1 is the lowest priority, while Task4 is the highest).\n");
+    printf(
+        "  To test whether priority is functional, we just need to turn on the priority, run it, and then turn off, run it.\n");
+    printf(
+        "2. bg_test: Start two threads in the background. One is busy sleeping for 10s, the other is nonbusy sleeping for 10s. \n");
+    printf(
+        "  After running, use ts -a to check all threads. The busy sleeping should be in READY status, and the other should be blocked.\n");
+    printf(
+        "3. wait_test: Start two thread : Hello and CV. Hello start first and just sleep for a while. CV start later than Hello and waiting for Hello to terminate.\n");
+    printf("  If wait is functional, CV need to terminate after Hello. \n");
+  }
 
+  void exec(char *cmd) {
+    if (output & tsk5)
+      printf("\n exec(%s)", cmd);
+    char ** args = parseLine(cmd);
+    if (output & tsk5) {
+      printf("\n <exec> tokenized command: ");
+      int i;
+      for (i = 0; args[i] != NULL && i < 10; i++)
+        printf("[%s] ", args[i]);
+    }
+    execLine(args);
+  }
+
+  static void shell(void *aux) {
+    char* command = "";
+    int finish = 0;
+    while (true) {
+      printf("\nProject04-Shell ~$");
+      interrupts_disable();
+      thread_block();
+
+      command = getBuffer();
+      exec(command);
+
+      setBufferPointer(0);
+      interrupts_enable();
+    }
+  }
+
+  /* Initializes the Operating System. The interruptions have to be disabled at entrance.
+   *
+   *  - Sets interruptions
+   *  - Sets the periodic timer
+   *  - Set the thread functionality
+   */
+  void init() {
+
+    /* Initializes ourselves as a thread so we can use locks,
+     then enable console locking. */
+    thread_init();
+
+    /* Initializes the frame buffer and console. */
+    framebuffer_init();
+    video_init();
+
+    printf("\nOsOs Kernel Initializing");
+
+    /* Initialize memory system. */
+    palloc_init(user_page_limit);
+    malloc_init();
+
+    /* Initializes the Interrupt System. */
+    interrupts_init();
+    timer_init();
+    serial_init();
+
+    thread_start();
+    timer_msleep(5000000);
+    if (output & tsk2)
+      printf("\ndbg: <init> -------back from first sleeping!\n");
+
+    printf("\nFinish booting.");
+
+    /* Initialize the task_sem to coordinate the main thread with workers */
+
+    sema_init(&task_sem, 0);
+    tid_t shellThreadId = thread_create("Shell", PRI_MAX, &shell, NULL);
+    struct thread * shellThread = getThreadById(shellThreadId);
+    if (shellThread != NULL)
+      printf("\nshellThread %d loaded\n", shellThread->tid);
+    else
+      printf("\n shellThread is NULL\n");
+    setShellThread(shellThread);
+
+    sema_down(&task_sem);
+    printf("\nAll done.");
+    thread_exit();
+  }
+
+  static void t_wait(struct wait_node *wn) {
+    lock_acquire(&wn->mutex);
+    while (!wn->done) {
+      cond_wait(&wn->cv, &wn->mutex);
+    }
+    lock_release(&wn->mutex);
+    wn->done = false;
+  }
+
+  static void t_exit(struct wait_node *wn) {
+    lock_acquire(&wn->mutex);
+    wn->done = true;
+    cond_signal(&wn->cv, &wn->mutex);
+    lock_release(&wn->mutex);
+  }
 

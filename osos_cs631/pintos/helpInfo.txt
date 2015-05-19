@@ -1,0 +1,18 @@
+------------<Help Information>--------------------
+1. ts [-a]: Show informations of running threads. 
+	[-a] option will let it show all existing threads.
+2. run <func_name> [priority] [thread_name] : run function <func_name> as a thread, and wait until it complete.
+	[priority] option: a integer that specify the priority of the created thread. Default: 31,
+	[thread_name] option: a string that specify the name of the created thread. Default: No Name.
+3. bg <func_name> [priority] [thread_name]: run function <func_name> as a new thread, and let it run in back ground.
+	[priority] option: a integer that specify the priority of the created thread. Default: 31,
+	[thread_name] option: a string that specify the name of the created thread. Default: No Name.
+4. priority <-on/off> : A command that enable(-on) or disable(-off) the priority scheduling
+5. help : Show help information.
+------------<Functions discription>----------------
+1. p_test: Start 4 different threads with different priorities (Task1 is the lowest priority, while Task4 is the highest).
+	To test whether priority is functional, we just need to turn on the priority, run it, and then turn off, run it.
+2. bg_test: Start two threads in the background. One is busy sleeping for 10s, the other is nonbusy sleeping for 10s. 
+	After running, use ts -a to check all threads. The busy sleeping should be in READY status, and the other should be blocked.
+3. wait_test: Start two thread : Hello and CV. Hello start first, and just sleep for a while. CV start later than Hello and waiting for Hello to terminate.
+	If wait is functional, CV need to terminate after Hello.  

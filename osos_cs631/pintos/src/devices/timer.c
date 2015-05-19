@@ -41,7 +41,6 @@ void timer_init() {
   printf("\nInitializing timer.....");
   interrupts_register_irq(IRQ_1, timer_irq_handler, "Timer Interrupt");
   timer_set_interval(IRQ_1, TIMER_PERIODIC_INTERVAL);
-  //printf("\n finish initializing timer.....");
 }
 
 /* Returns the timestamp. */
