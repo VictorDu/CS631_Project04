@@ -28,7 +28,7 @@ The command information is follow:<br/>
 	[thread_name] option: a string that specify the name of the created thread. Default: No Name.<br/>
 4. priority <-on/off> : A command that enable(-on) or disable(-off) the priority scheduling<br/>
 5. help : Show help information.<br/>
-<br/>------------<Functions discription>----------------<br/>
+<br/>------------Functions discription----------------<br/>
 1. p_test: Start 4 different threads with different priorities (Task1 is the lowest priority, while Task4 is the highest).<br/>
 	To test whether priority is functional, we just need to turn on the priority, run it, and then turn off, run it.<br/>
 2. bg_test: Start two threads in the background. One is busy sleeping for 10s, the other is nonbusy sleeping for 10s. <br/>
